@@ -653,8 +653,8 @@ with tab1:
             return "color:#556688"
 
         styled = (display_df.style
-                  .applymap(style_result, subset=["Resultado"])
-                  .applymap(style_miss_type, subset=["Tipo Miss"])
+                  .map(style_result, subset=["Resultado"])
+                  .map(style_miss_type, subset=["Tipo Miss"])
                   .set_properties(**{
                       "background-color": "#12192a",
                       "color": "#c8d8f0",
