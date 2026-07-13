@@ -6,13 +6,14 @@ import math
 from dataclasses import dataclass, field
 from typing import List, Optional
 import time
+import random
 
 # ══════════════════════════════════════════════════════════════
 #  CONFIGURACIÓN DE PÁGINA
 # ══════════════════════════════════════════════════════════════
 st.set_page_config(
     page_title="Simulador de Caché",
-    page_icon="🧠",
+    page_icon="",
     layout="wide",
     initial_sidebar_state="expanded",
 )
@@ -159,6 +160,7 @@ class CacheLine:
     tag: int = 0
     last_used: int = 0
     frequency: int = 0
+    insert_time: int = 0   # Nuevo campo para FIFO
 
 @dataclass
 class AccessResult:
@@ -228,9 +230,9 @@ class CacheSimulator:
         elif self.policy == "LFU":
             return min(range(len(lines)), key=lambda i: lines[i].frequency)
         elif self.policy == "FIFO":
-            return min(range(len(lines)), key=lambda i: lines[i].last_used)
+            # FIFO: seleccionar la línea con menor tiempo de inserción
+            return min(range(len(lines)), key=lambda i: lines[i].insert_time)
         elif self.policy == "Random":
-            import random
             return random.randint(0, len(lines) - 1)
         return 0
 
@@ -272,10 +274,12 @@ class CacheSimulator:
                 miss_type = "Conflicto/Cap"
                 evicted_tag = curr_set[victim_idx].tag
 
+            # Cargar nueva línea
             curr_set[victim_idx].valid     = True
             curr_set[victim_idx].tag       = tag
             curr_set[victim_idx].last_used = curr_time
             curr_set[victim_idx].frequency = 1
+            curr_set[victim_idx].insert_time = curr_time   # Asignar tiempo de inserción para FIFO
 
         result = AccessResult(
             block      = req_block,
@@ -428,7 +432,7 @@ def render_cache_state(sim: CacheSimulator, max_sets: int = 16):
                         f'</div>', unsafe_allow_html=True)
                 else:
                     st.markdown(
-                        f'<div class="cache-line-empty">[W{way}] — vacío —</div>',
+                        f'<div class="cache-line-empty">[W{way}] -- vacio --</div>',
                         unsafe_allow_html=True)
 
 # ══════════════════════════════════════════════════════════════
@@ -442,7 +446,7 @@ if "configured" not in st.session_state: st.session_state.configured = False
 #  SIDEBAR — CONFIGURACIÓN
 # ══════════════════════════════════════════════════════════════
 with st.sidebar:
-    st.markdown("## ⚙️ Configuración de Caché")
+    st.markdown("## Configuracion de Cache")
     st.markdown("---")
 
     cache_size = st.selectbox(
@@ -468,7 +472,7 @@ with st.sidebar:
     associativity = assoc_map[assoc_label]
 
     policy = st.radio(
-        "Política de reemplazo",
+        "Politica de reemplazo",
         ["LRU", "LFU", "FIFO", "Random"],
         index=0,
         horizontal=False,
@@ -481,44 +485,44 @@ with st.sidebar:
         ib  = int(math.log2(ns)) if ns > 1 else 0
         tb  = 32 - (ib + ob)
         st.markdown("---")
-        st.markdown("**Vista previa de bits de dirección (32-bit)**")
+        st.markdown("**Vista previa de bits de direccion (32-bit)**")
         st.markdown(f"""
         <div class="bits-box">
-        📌 Sets     : {ns}<br>
-        🏷️  TAG      : {tb} bits<br>
-        📍 INDEX    : {ib} bits<br>
-        📦 OFFSET   : {ob} bits
+        Sets     : {ns}<br>
+        TAG      : {tb} bits<br>
+        INDEX    : {ib} bits<br>
+        OFFSET   : {ob} bits
         </div>
         """, unsafe_allow_html=True)
     except:
         pass
 
     st.markdown("---")
-    if st.button("🚀 Inicializar / Reiniciar Caché", use_container_width=True, type="primary"):
+    if st.button("Inicializar / Reiniciar Cache", use_container_width=True, type="primary"):
         try:
             st.session_state.sim = CacheSimulator(cache_size, block_size, associativity, policy)
             st.session_state.log_df = pd.DataFrame()
             st.session_state.configured = True
-            st.success("✅ Caché inicializada correctamente")
+            st.success("Cache inicializada correctamente")
         except ValueError as e:
             st.error(str(e))
 
 # ══════════════════════════════════════════════════════════════
 #  CONTENIDO PRINCIPAL
 # ══════════════════════════════════════════════════════════════
-st.markdown('<div class="main-title">🧠 Simulador de Caché CPU</div>', unsafe_allow_html=True)
-st.markdown('<div class="main-sub">Visualización interactiva · Mapeo directo · Asociativo · LRU / LFU / FIFO / Random</div>',
+st.markdown('<div class="main-title">Simulador de Cache CPU</div>', unsafe_allow_html=True)
+st.markdown('<div class="main-sub">Visualizacion interactiva · Mapeo directo · Asociativo · LRU / LFU / FIFO / Random</div>',
             unsafe_allow_html=True)
 
 if not st.session_state.configured or st.session_state.sim is None:
-    st.info("👈 Configura los parámetros en la barra lateral y presiona **Inicializar Caché**")
+    st.info("Configura los parametros en la barra lateral y presiona Inicializar Cache")
     st.stop()
 
 sim: CacheSimulator = st.session_state.sim
 
 # ── PESTAÑAS ─────────────────────────────────────────────────
 tab1, tab2, tab3, tab4 = st.tabs(
-    ["🎯 Simular Accesos", "📊 Estadísticas", "🗂️ Estado de Caché", "📖 Historial"]
+    ["Simular Accesos", "Estadisticas", "Estado de Cache", "Historial"]
 )
 
 # ══════════════════════════════════════════════════════════════
@@ -536,9 +540,9 @@ with tab1:
         )
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            run_manual = st.button("▶️ Ejecutar accesos", use_container_width=True, type="primary")
+            run_manual = st.button("Ejecutar accesos", use_container_width=True, type="primary")
         with col_btn2:
-            clear_btn = st.button("🗑️ Limpiar log", use_container_width=True)
+            clear_btn = st.button("Limpiar log", use_container_width=True)
 
         if clear_btn:
             st.session_state.sim = CacheSimulator(
@@ -556,7 +560,7 @@ with tab1:
                     new_rows.append({
                         "#":         len(st.session_state.log_df) + len(new_rows) + 1,
                         "Bloque":    r.block,
-                        "Dirección": f"0x{r.address:04X}",
+                        "Direccion": f"0x{r.address:04X}",
                         "TAG (bin)": r.tag_bin,
                         "IDX (bin)": r.index_bin,
                         "OFF (bin)": r.offset_bin,
@@ -567,15 +571,15 @@ with tab1:
                 new_df = pd.DataFrame(new_rows)
                 st.session_state.log_df = pd.concat(
                     [st.session_state.log_df, new_df], ignore_index=True)
-                st.success(f"✅ {len(blocks)} acceso(s) procesado(s)")
+                st.success(f"{len(blocks)} acceso(s) procesado(s)")
             except ValueError:
                 st.error("Solo ingresa números enteros separados por espacios o comas.")
 
     with col_right:
         st.markdown("### Patrones de acceso predefinidos")
 
-        pattern = st.selectbox("Selecciona un patrón", [
-            "Secuencial (0 → N)",
+        pattern = st.selectbox("Selecciona un patron", [
+            "Secuencial (0 -> N)",
             "Acceso repetido (temporal locality)",
             "Stride-2 (0, 2, 4, 6...)",
             "Aleatorio",
@@ -583,17 +587,16 @@ with tab1:
             "Personalizado",
         ])
 
-        n_refs = st.slider("Número de referencias", 4, 64, 16)
+        n_refs = st.slider("Numero de referencias", 4, 64, 16)
 
         custom_pat = ""
         if pattern == "Personalizado":
             custom_pat = st.text_input("Secuencia personalizada", "0 1 2 0 1 2 3 0")
 
-        if st.button("▶️ Ejecutar patrón", use_container_width=True):
-            import random as rnd
+        if st.button("Ejecutar patron", use_container_width=True):
             ns = sim.num_sets
 
-            if pattern == "Secuencial (0 → N)":
+            if pattern == "Secuencial (0 -> N)":
                 blocks = list(range(n_refs))
             elif pattern == "Acceso repetido (temporal locality)":
                 base = list(range(min(4, ns)))
@@ -601,9 +604,8 @@ with tab1:
             elif pattern == "Stride-2 (0, 2, 4, 6...)":
                 blocks = [i * 2 for i in range(n_refs)]
             elif pattern == "Aleatorio":
-                blocks = [rnd.randint(0, ns * 4) for _ in range(n_refs)]
+                blocks = [random.randint(0, ns * 4) for _ in range(n_refs)]
             elif pattern == "Thrashing (peor caso)":
-                # Accede a ns+1 bloques que mapean al mismo set → thrashing
                 blocks = [(i * ns) % (ns * sim.associativity + 1) for i in range(n_refs)]
             else:
                 try:
@@ -619,7 +621,7 @@ with tab1:
                     new_rows.append({
                         "#":         len(st.session_state.log_df) + len(new_rows) + 1,
                         "Bloque":    r.block,
-                        "Dirección": f"0x{r.address:04X}",
+                        "Direccion": f"0x{r.address:04X}",
                         "TAG (bin)": r.tag_bin,
                         "IDX (bin)": r.index_bin,
                         "OFF (bin)": r.offset_bin,
@@ -630,12 +632,12 @@ with tab1:
                 new_df = pd.DataFrame(new_rows)
                 st.session_state.log_df = pd.concat(
                     [st.session_state.log_df, new_df], ignore_index=True)
-                st.success(f"✅ Patrón ejecutado — {len(blocks)} accesos")
+                st.success(f"Patron ejecutado -- {len(blocks)} accesos")
 
     # ── Tabla de últimos accesos ──────────────────────────
     if not st.session_state.log_df.empty:
         st.markdown("---")
-        st.markdown("### 📋 Últimos accesos")
+        st.markdown("### Ultimos accesos")
         display_df = st.session_state.log_df.tail(30).copy()
 
         def style_result(val):
@@ -671,13 +673,13 @@ with tab2:
     stats = st.session_state.sim.get_stats()
 
     if stats["total"] == 0:
-        st.info("Aún no hay accesos. Ve a la pestaña **Simular Accesos** para empezar.")
+        st.info("Aun no hay accesos. Ve a la pestaña Simular Accesos para empezar.")
     else:
         # Métricas principales
         c1, c2, c3, c4 = st.columns(4)
         with c1: metric_card("Accesos Totales",  str(stats["total"]),   "")
-        with c2: metric_card("Hits",              str(stats["hits"]),   "✅ aciertos")
-        with c3: metric_card("Misses",            str(stats["misses"]), "❌ fallos")
+        with c2: metric_card("Hits",              str(stats["hits"]),   "aciertos")
+        with c3: metric_card("Misses",            str(stats["misses"]), "fallos")
         with c4: metric_card("AMAT",              f'{stats["amat"]:.2f}', "ciclos")
 
         st.markdown("---")
@@ -698,13 +700,13 @@ with tab2:
         # Gráfico de historia + pastel de misses
         col_h, col_p = st.columns([2, 1], gap="large")
         with col_h:
-            st.markdown("##### Evolución acumulada de hits / misses")
+            st.markdown("##### Evolucion acumulada de hits / misses")
             if st.session_state.sim.access_log:
                 st.plotly_chart(
                     history_chart(st.session_state.sim.access_log),
                     use_container_width=True)
         with col_p:
-            st.markdown("##### Clasificación 3C de misses")
+            st.markdown("##### Clasificacion 3C de misses")
             pie = miss_pie(stats["compulsory"], stats["conflict"])
             if pie:
                 st.plotly_chart(pie, use_container_width=True)
@@ -713,13 +715,13 @@ with tab2:
 
         # Info de configuración
         st.markdown("---")
-        st.markdown("##### Configuración activa")
+        st.markdown("##### Configuracion activa")
         info_cols = st.columns(4)
         cfg = [
             ("Cache Size", f"{sim.cache_size} B"),
             ("Block Size", f"{sim.block_size} B"),
             ("Sets",       str(stats["num_sets"])),
-            ("Política",   sim.policy),
+            ("Politica",   sim.policy),
         ]
         for col, (lbl, val) in zip(info_cols, cfg):
             with col: metric_card(lbl, val)
@@ -737,7 +739,7 @@ with tab2:
 #  TAB 3 — ESTADO VISUAL DE LA CACHÉ
 # ══════════════════════════════════════════════════════════════
 with tab3:
-    st.markdown("### 🗂️ Estado actual de la caché")
+    st.markdown("### Estado actual de la cache")
 
     max_vis = min(sim.num_sets, 16)
     if sim.num_sets > 16:
@@ -753,10 +755,10 @@ with tab3:
                 rows.append({
                     "Set":   s_idx,
                     "Way":   w_idx,
-                    "Válido": "✅" if line.valid else "❌",
-                    "TAG":   line.tag if line.valid else "—",
-                    "Último uso": line.last_used if line.valid else "—",
-                    "Frecuencia": line.frequency if line.valid else "—",
+                    "Valido": "Si" if line.valid else "No",
+                    "TAG":   line.tag if line.valid else "--",
+                    "Ultimo uso": line.last_used if line.valid else "--",
+                    "Frecuencia": line.frequency if line.valid else "--",
                 })
         cache_df = pd.DataFrame(rows)
         st.dataframe(cache_df, use_container_width=True, height=500)
@@ -764,24 +766,24 @@ with tab3:
     st.markdown("---")
     st.markdown(f"""
     **Leyenda:**
-    - 🔵 Línea válida con datos en caché
-    - ⬛ Línea vacía (inválida)
-    - **TAG**: etiqueta de la dirección almacenada
-    - **LU**: timestamp del último uso (para LRU)
+    - Linea valida con datos en cache
+    - Linea vacia (invalida)
+    - **TAG**: etiqueta de la direccion almacenada
+    - **LU**: timestamp del ultimo uso (para LRU)
     - **F**: frecuencia de uso (para LFU)
 
-    **Configuración:** `{sim.cache_size}B` caché · `{sim.block_size}B` bloque ·
-    `{sim.num_sets}` sets · `{sim.associativity}`-way · Política: `{sim.policy}`
+    **Configuracion:** `{sim.cache_size}B` cache · `{sim.block_size}B` bloque ·
+    `{sim.num_sets}` sets · `{sim.associativity}`-way · Politica: `{sim.policy}`
     """)
 
 # ══════════════════════════════════════════════════════════════
 #  TAB 4 — HISTORIAL COMPLETO
 # ══════════════════════════════════════════════════════════════
 with tab4:
-    st.markdown("### 📖 Historial completo de accesos")
+    st.markdown("### Historial completo de accesos")
 
     if st.session_state.log_df.empty:
-        st.info("Aún no hay accesos registrados.")
+        st.info("Aun no hay accesos registrados.")
     else:
         df = st.session_state.log_df.copy()
 
@@ -816,7 +818,7 @@ with tab4:
         # Exportar CSV
         csv = df.to_csv(index=False).encode("utf-8")
         st.download_button(
-            "⬇️ Descargar CSV",
+            "Descargar CSV",
             data=csv,
             file_name="cache_simulation.csv",
             mime="text/csv",
