@@ -1,8 +1,8 @@
-# 🧠 Simulador de Caché CPU
+# Simulador de Caché CPU
 
 Simulador interactivo de memoria caché desarrollado con **Python + Streamlit**.
 
-## ✨ Características
+## Características
 
 - **Mapeo Directo**, **N-way Asociativo** y **Totalmente Asociativo**
 - Políticas de reemplazo: **LRU**, **LFU**, **FIFO**, **Random**
@@ -14,7 +14,7 @@ Simulador interactivo de memoria caché desarrollado con **Python + Streamlit**.
 - Historial exportable a CSV
 - Gráficos interactivos con Plotly
 
-## 🚀 Ejecución local
+## Ejecución local
 
 ```bash
 # Clonar el repositorio
@@ -28,7 +28,7 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## 📦 Estructura del proyecto
+##  Estructura del proyecto
 
 ```
 cache-simulator/
@@ -39,7 +39,7 @@ cache-simulator/
     └── config.toml     # Configuración del tema
 ```
 
-## 🌐 Deploy en Streamlit Cloud
+##  Deploy en Streamlit Cloud
 
 1. Sube el repositorio a GitHub
 2. Ve a [share.streamlit.io](https://share.streamlit.io)
@@ -47,7 +47,7 @@ cache-simulator/
 4. Selecciona el repositorio y el archivo `app.py`
 5. Haz clic en **Deploy**
 
-## 📐 Parámetros de configuración
+##  Parámetros de configuración
 
 | Parámetro | Descripción | Ejemplo |
 |-----------|-------------|---------|
@@ -67,4 +67,4 @@ AMAT        = 1 + (miss_rate × 100)  ciclos
 ```
 
 ---
-Desarrollado para el curso de **Compiladores y Teoría de Lenguajes** · UNJBG
+Desarrollado para el curso de Arquitectura de Computadores
